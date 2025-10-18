@@ -42,7 +42,8 @@ services:
     ports:
       - "9090:9090"
     volumes:
-      - prometheus_data:/etc/prometheus
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
@@ -61,7 +62,7 @@ volumes:
     driver_opts:
       type: none
       o: bind
-      device: Z:/containers-data/accounting/app-data/prometheus_data
+      device: Z:/containers-data/accounting/prometheus_data
   z_containers_data_app:
     driver: local
     driver_opts:

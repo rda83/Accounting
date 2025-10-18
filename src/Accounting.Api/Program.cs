@@ -22,7 +22,7 @@ var otel = builder.Services.AddOpenTelemetry();
 
 // Configure OpenTelemetry Resources with the application name
 otel.ConfigureResource(resource => resource
-    .AddService(serviceName: builder.Environment.ApplicationName));
+    .AddService(serviceName: "accounting.api"));
 
 // Add Metrics for ASP.NET Core and our custom metrics and export to Prometheus
 otel.WithMetrics(metrics => metrics
@@ -35,6 +35,8 @@ otel.WithMetrics(metrics => metrics
     // Metrics provided by System.Net libraries
     .AddMeter("System.Net.Http")
     .AddMeter("System.Net.NameResolution")
+    .AddRuntimeInstrumentation()
+    .AddProcessInstrumentation()
     .AddPrometheusExporter());
 
 // Add Tracing for ASP.NET Core and our custom ActivitySource and export to Jaeger
