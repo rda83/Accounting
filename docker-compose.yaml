@@ -1,0 +1,88 @@
+version: '3.8'
+
+services:
+  accounting.api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5000:8080"
+    env_file:
+      - .env
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=Host=accounting.db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+    depends_on:
+      - accounting.db
+    networks:
+      - accounting-network
+    volumes:
+      - z_containers_data_app:/app/data
+      - z_containers_data_logs:/app/logs
+
+  accounting.db:
+    image: postgres:latest
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - z_containers_data_db:/var/lib/postgresql/data
+      - z_containers_data_db_backups:/backups
+    networks:
+      - accounting-network
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - prometheus_data:/etc/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    networks:
+      - accounting-network
+
+networks:
+  accounting-network:
+    driver: bridge
+    
+volumes:
+  postgres_data:
+    driver: local
+  prometheus_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: Z:/containers-data/accounting/app-data/prometheus_data
+  z_containers_data_app:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: Z:/containers-data/accounting/app-data
+  z_containers_data_logs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: Z:/containers-data/accounting/app-logs
+  z_containers_data_db:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: Z:/containers-data/accounting/db-data
+  z_containers_data_db_backups:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: Z:/containers-data/accounting/db-backups
