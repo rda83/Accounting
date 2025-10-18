@@ -1,32 +1,42 @@
 using Microsoft.AspNetCore.Mvc;
+using System.Reflection;
+using System.IO;
+using System.Globalization;
 
 namespace Accounting.Api.Controllers;
 
 [ApiController]
 [Route("[controller]")]
-public class WeatherForecastController : ControllerBase
+public class VersionController : ControllerBase
 {
-    private static readonly string[] Summaries = new[]
-    {
-        "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-    };
+    private readonly ILogger<VersionController> _logger;
 
-    private readonly ILogger<WeatherForecastController> _logger;
-
-    public WeatherForecastController(ILogger<WeatherForecastController> logger)
+    public VersionController(ILogger<VersionController> logger)
     {
         _logger = logger;
     }
 
-    //[HttpGet]
-    //public IEnumerable<WeatherForecast> Get()
-    //{
-    //    return Enumerable.Range(1, 5).Select(index => new WeatherForecast
-    //    {
-    //        Date = DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-    //        TemperatureC = Random.Shared.Next(-20, 55),
-    //        Summary = Summaries[Random.Shared.Next(Summaries.Length)]
-    //    })
-    //    .ToArray();
-    //}
+    [HttpGet]
+    public VersionInfo Get()
+    {
+        var assembly = GetType().Assembly;
+        var assemblyName = assembly.GetName();
+
+        var result = new VersionInfo(
+
+            Version: assemblyName.Version?.ToString() ?? "0.0.0.0",
+            InformationalVersion: assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "Unknown",
+            AssemblyName: assemblyName.Name ?? "Unknown",
+            BuildDate: System.IO.File.GetLastWriteTime(assembly.Location)
+        );
+        return result;
+    }
+
 }
+
+public record VersionInfo(
+    string Version,
+    string InformationalVersion,
+    string AssemblyName,
+    DateTime BuildDate
+);
