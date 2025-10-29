@@ -1,11 +1,15 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.13.35825.156 d17.13
+VisualStudioVersion = 17.13.35825.156
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Accounting.Api", "src\Accounting.Api\Accounting.Api.csproj", "{118C7643-3FBB-4921-9751-9D7308DDB519}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{8A702882-4E31-4DEE-BFB3-35679D6A982E}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "LoadTests", "LoadTests", "{B19A2BF2-2017-4407-8EEC-11990CEAE5AC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -23,6 +27,7 @@ Global
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{118C7643-3FBB-4921-9751-9D7308DDB519} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{B19A2BF2-2017-4407-8EEC-11990CEAE5AC} = {8A702882-4E31-4DEE-BFB3-35679D6A982E}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {581EBBCC-51D8-4C5B-BBC6-2C2F1498E03B}

@@ -1,4 +1,5 @@
 using Accounting.Api.Data;
+using Accounting.Api.Services;
 using Microsoft.EntityFrameworkCore;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
@@ -14,6 +15,8 @@ AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 builder.Services.AddDbContext<AppDbContext>(options =>
 options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+builder.Services.AddScoped<ITransferService, TransferService>();
+builder.Services.AddScoped<TestDataService>();
 
 #region OpenTelemetry
 
