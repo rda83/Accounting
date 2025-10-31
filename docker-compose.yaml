@@ -1,28 +1,60 @@
 version: '3.8'
 
 services:
-  accounting.api:
+  accounting-api:
+    container_name: accounting-api
     build:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "5000:8080"
+      - "${API_PORT}:8080"
     env_file:
       - .env
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:8080
-      - ConnectionStrings__DefaultConnection=Host=accounting.db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      - ConnectionStrings__DefaultConnection=Host=accounting-db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
     depends_on:
-      - accounting.db
+      - accounting-db
     networks:
       - accounting-network
     volumes:
-      - z_containers_data_app:/app/data
-      - z_containers_data_logs:/app/logs
+      - accounting_api_data_app:/app/data
+      - accounting_api_data_logs:/app/logs
 
-  accounting.db:
-    image: postgres:latest
+  accounting-db:
+    container_name: accounting-db
+    image: postgres:${POSTGRES_VERSION}
+    command:
+      - "postgres"
+      - "-c"
+      - "max_connections=50"
+      - "-c"
+      - "shared_buffers=512MB"
+      - "-c"
+      - "effective_cache_size=4GB"
+      - "-c"
+      - "work_mem=16MB"
+      - "-c"
+      - "maintenance_work_mem=512MB"
+      - "-c"
+      - "random_page_cost=1.1"
+      - "-c"
+      - "temp_file_limit=10GB"
+      - "-c"
+      - "log_min_duration_statement=200ms"
+      - "-c"
+      - "idle_in_transaction_session_timeout=10s"
+      - "-c"
+      - "lock_timeout=1s"
+      - "-c"
+      - "statement_timeout=60s"
+      - "-c"
+      - "shared_preload_libraries=pg_stat_statements"
+      - "-c"
+      - "pg_stat_statements.max=10000"
+      - "-c"
+      - "pg_stat_statements.track=all"
     env_file:
       - .env
     environment:
@@ -30,23 +62,82 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 4G
     volumes:
-      - z_containers_data_db:/var/lib/postgresql/data
-      - z_containers_data_db_backups:/backups
+      - ${POSTGRES_INIT_SCRIPTS_DIR}:/docker-entrypoint-initdb.d
+      - accounting_data_db:/var/lib/postgresql/data
     networks:
       - accounting-network
 
-  prometheus:
-    image: prom/prometheus:latest
+  accounting-pgadmin:
+    container_name: accounting-pgadmin
+    image: dpage/pgadmin4:${PGADMIN_VERSION}
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
     ports:
-      - "9090:9090"
+      - "${PGADMIN_PORT}:80"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 1G
+    networks:
+      - accounting-network
+
+  accounting-postgres-exporter:
+    container_name: accounting-postgres-exporter
+    image: prometheuscommunity/postgres-exporter:${POSTGRES_EXPORTER_VERSION}
+    environment:
+      DATA_SOURCE_URI: "postgres-dev:5432/${POSTGRES_DB}?sslmode=disable"
+      DATA_SOURCE_USER: ${POSTGRES_USER}
+      DATA_SOURCE_PASS: ${POSTGRES_PASSWORD}
+      PG_EXPORTER_EXTEND_QUERY_PATH: "/etc/postgres_exporter/queries.yaml"
+    volumes:
+      - ./queries.yaml:/etc/postgres_exporter/queries.yaml:ro
+    ports:
+      - "9187:9187"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+         cpus: '0.2'
+         memory: 500M
+    networks:
+      - accounting-network
+
+  accounting-prometheus:
+    container_name: accounting-prometheus
+    image: prom/prometheus:${PROMETHEUS_VERSION}
+    ports:
+      - "${PROMETHEUS_PORT}:9090"
+    restart: unless-stopped
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
-      - prometheus_data:/prometheus
+      - accounting_prometheus_data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
     networks:
       - accounting-network
 
@@ -55,35 +146,33 @@ networks:
     driver: bridge
     
 volumes:
-  postgres_data:
-    driver: local
-  prometheus_data:
+  accounting_prometheus_data:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: Z:/containers-data/accounting/prometheus_data
-  z_containers_data_app:
+      device: ${PROMETHEUS_DATA_DIR}
+  accounting_api_data_app:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: Z:/containers-data/accounting/app-data
-  z_containers_data_logs:
+      device: ${API_DATA}
+  accounting_api_data_logs:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: Z:/containers-data/accounting/app-logs
-  z_containers_data_db:
+      device: ${API_DATA_LOG} 
+  accounting_data_db:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: Z:/containers-data/accounting/db-data
-  z_containers_data_db_backups:
+      device: ${POSTGRES_DATA_DIR}
+  pgadmin_data:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: Z:/containers-data/accounting/db-backups
+      device: ${PGADMIN_DATA_DIR}
